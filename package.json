@@ -1,0 +1,35 @@
+{
+  "name": "lab-equipment-booking",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "clsx": "latest",
+    "date-fns": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwind-merge": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
