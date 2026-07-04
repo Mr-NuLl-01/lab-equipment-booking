@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "课题组内部实验设备预约 MVP",
 };
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
