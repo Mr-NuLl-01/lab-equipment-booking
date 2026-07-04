@@ -99,3 +99,7 @@ where email = 'your-email@example.com';
 2. 在 Vercel Project Settings 配置 `.env.example` 中的变量。
 3. 在 Supabase Dashboard 添加 Vercel 域名到 Auth URL 配置。
 4. 部署前确认 `npm run build` 通过。
+
+## 腾讯云香港 VPS 部署
+
+项目已提供 Docker 部署配置，适合部署到腾讯云香港 CVM。步骤见 `DEPLOYMENT_TENCENT_CLOUD_HK.md`。

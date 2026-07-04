@@ -1,0 +1,16 @@
+.DS_Store
+.git
+.next
+.vercel
+coverage
+node_modules
+npm-debug.log*
+Dockerfile
+docker-compose.yml
+.env
+.env.local
+.env*.local
+.env.*.local
+.env.production
+playwright-report
+test-results
