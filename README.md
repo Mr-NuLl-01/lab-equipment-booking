@@ -1,6 +1,6 @@
 # 课题组设备预约系统 MVP
 
-面向课题组内部学生的响应式设备预约系统。学生可以查看设备、预约时间、取消自己的未来预约并提交设备异常；管理员可以认证成员、维护设备、管理预约和处理异常。
+实验室设备预约系统。面向课题组内部学生的响应式设备预约系统，学生可以查看设备、预约时间、取消自己的未来预约并提交设备异常；管理员可以认证成员、维护设备、管理预约和处理异常。
 
 ## 技术栈
 
@@ -27,11 +27,11 @@
 - `SUPABASE_SERVICE_ROLE_KEY`：仅预留给未来服务端维护脚本，当前应用不读取，也不要暴露到客户端。
 - `NEXT_PUBLIC_DEFAULT_TIMEZONE`：默认 `Asia/Shanghai`。
 
-## Supabase migration 使用方式
+## Supabase Migration 使用方式
 
 Supabase SQL editor 不需要下载软件。打开浏览器进入 [Supabase Dashboard](https://supabase.com/dashboard)，选择你的项目，在左侧菜单进入 **SQL Editor**，新建 query，粘贴并执行 `supabase/schema.sql`。
 
-该文件会创建四张核心表、触发器、辅助权限函数、RLS 策略、预约冲突 exclusion constraint 和少量 seed 设备。重新执行是幂等的，适合开发阶段更新策略。
+该文件会创建核心表、触发器、辅助权限函数、RLS 策略、预约冲突 exclusion constraint 和少量 seed 设备。重新执行是幂等的，适合开发阶段更新策略。
 
 ## 检查 Supabase 环境
 
@@ -80,9 +80,9 @@ where email = 'your-email@example.com';
 - 邮箱密码注册和登录。
 - 注册用户默认 `student + pending`。
 - pending 用户可以查看设备，并预约 `requires_certification=false` 的开放设备。
-- active student 可以预约所有开放设备，包括需要认证的设备。
+- 需要认证的设备按成员逐台授权，admin 默认拥有全部设备权限。
 - disabled 用户被状态页拦截，不能正常使用系统。
-- admin 可管理成员、设备、预约和异常反馈。
+- admin 可管理成员、设备、预约、维护提醒和异常反馈。
 - 预约服务端检查时间合法性和冲突。
 - 数据库用 `btree_gist` exclusion constraint 防止 confirmed 预约并发重叠。
 - 手机端优先布局，管理页在窄屏下使用卡片和纵向表单。
