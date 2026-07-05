@@ -2,16 +2,23 @@ import { BookingForm } from "@/components/bookings/booking-form";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireAuthenticatedProfile } from "@/lib/data/auth";
-import { getEquipment, listEquipmentPermissions, listMyBookings, listUpcomingBookings } from "@/lib/data/equipment";
+import {
+  getEquipment,
+  listActiveMaintenanceWindows,
+  listEquipmentPermissions,
+  listMyBookings,
+  listUpcomingBookings,
+} from "@/lib/data/equipment";
 
 export default async function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { user, profile } = await requireAuthenticatedProfile();
   const equipment = await getEquipment(id);
-  const [bookings, myBookings, permissions] = await Promise.all([
+  const [bookings, myBookings, permissions, maintenanceWindows] = await Promise.all([
     listUpcomingBookings(id),
     listMyBookings(user.id),
     listEquipmentPermissions(user.id),
+    listActiveMaintenanceWindows(id),
   ]);
   const myEquipmentBookings = myBookings
     .filter((booking) => booking.equipment_id === id)
@@ -58,7 +65,10 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
               bookedRanges={bookings.map((booking) => ({
                 start_time: booking.start_time,
                 end_time: booking.end_time,
-              }))}
+              })).concat(maintenanceWindows.map((window) => ({
+                start_time: window.start_time,
+                end_time: window.end_time,
+              })))}
               recentBookings={myEquipmentBookings.map((booking) => ({
                 id: booking.id,
                 start_time: booking.start_time,

@@ -254,18 +254,53 @@ export async function createMaintenanceWindowAction(formData: FormData) {
   if (end <= start) return { error: "结束时间必须晚于开始时间" };
 
   const supabase = await createClient();
-  const { data: windowRow, error: windowError } = await supabase
+  const { data: equipment, error: equipmentError } = await supabase
+    .from("equipment")
+    .select("status,is_bookable")
+    .eq("id", equipmentId)
+    .single<{ status: "normal" | "paused" | "maintenance" | "retired"; is_bookable: boolean }>();
+  if (equipmentError) return { error: "读取设备状态失败：" + equipmentError.message };
+
+  let windowInsert = await supabase
     .from("maintenance_windows")
     .insert({
       equipment_id: equipmentId,
       reason,
       start_time: start.toISOString(),
       end_time: end.toISOString(),
+      previous_equipment_status: equipment.status,
+      previous_is_bookable: equipment.is_bookable,
       created_by: user.id,
     })
     .select("id")
     .single<{ id: string }>();
+
+  if (
+    windowInsert.error &&
+    (windowInsert.error.message.includes("previous_equipment_status") ||
+      windowInsert.error.message.includes("previous_is_bookable"))
+  ) {
+    windowInsert = await supabase
+      .from("maintenance_windows")
+      .insert({
+        equipment_id: equipmentId,
+        reason,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        created_by: user.id,
+      })
+      .select("id")
+      .single<{ id: string }>();
+  }
+
+  const { data: windowRow, error: windowError } = windowInsert;
   if (windowError) return { error: "创建维护窗口失败：" + windowError.message };
+
+  const { error: equipmentUpdateError } = await supabase
+    .from("equipment")
+    .update({ status: "maintenance", is_bookable: false })
+    .eq("id", equipmentId);
+  if (equipmentUpdateError) return { error: "维护窗口已创建，但设备停机失败：" + equipmentUpdateError.message };
 
   const marker = `维护窗口:${windowRow.id}:${reason}`;
   const { error: bookingError } = await supabase
@@ -286,6 +321,7 @@ export async function createMaintenanceWindowAction(formData: FormData) {
   revalidatePath("/admin/bookings");
   revalidatePath("/bookings");
   revalidatePath("/me");
+  revalidatePath("/equipment");
   revalidatePath(`/equipment/${equipmentId}`);
   return { ok: true };
 }
@@ -303,18 +339,67 @@ export async function completeMaintenanceWindowAction(formData: FormData) {
   );
 
   const supabase = await createClient();
-  const { data: windowRow, error: windowError } = await supabase
+  type MaintenanceWindowRestoreInfo = {
+    equipment_id: string;
+    previous_equipment_status: "normal" | "paused" | "maintenance" | "retired" | null;
+    previous_is_bookable: boolean | null;
+  };
+
+  const windowLookup = await supabase
     .from("maintenance_windows")
-    .select("equipment_id")
+    .select("equipment_id,previous_equipment_status,previous_is_bookable")
     .eq("id", id)
-    .single<{ equipment_id: string }>();
+    .single<MaintenanceWindowRestoreInfo>();
+
+  let windowRow = windowLookup.data;
+  let windowError = windowLookup.error;
+
+  if (
+    windowError &&
+    (windowError.message.includes("previous_equipment_status") ||
+      windowError.message.includes("previous_is_bookable"))
+  ) {
+    const fallback = await supabase
+      .from("maintenance_windows")
+      .select("equipment_id")
+      .eq("id", id)
+      .single<{ equipment_id: string }>();
+    windowRow = fallback.data
+      ? {
+          equipment_id: fallback.data.equipment_id,
+          previous_equipment_status: null,
+          previous_is_bookable: null,
+        }
+      : null;
+    windowError = fallback.error;
+  }
+
   if (windowError) return { error: "读取维护窗口失败：" + windowError.message };
+  if (!windowRow) return { error: "维护窗口不存在" };
 
   const { error } = await supabase
     .from("maintenance_windows")
     .update({ status: "completed", completed_at: completedAt.toISOString() })
     .eq("id", id);
   if (error) return { error: "结束维护失败：" + error.message };
+
+  const { data: activeWindows } = await supabase
+    .from("maintenance_windows")
+    .select("id")
+    .eq("equipment_id", windowRow.equipment_id)
+    .eq("status", "active")
+    .neq("id", id)
+    .limit(1);
+
+  if (!activeWindows || activeWindows.length === 0) {
+    await supabase
+      .from("equipment")
+      .update({
+        status: windowRow.previous_equipment_status || "normal",
+        is_bookable: windowRow.previous_is_bookable ?? true,
+      })
+      .eq("id", windowRow.equipment_id);
+  }
 
   const { data: cancelledBookings } = await supabase
     .from("bookings")
@@ -351,6 +436,7 @@ export async function completeMaintenanceWindowAction(formData: FormData) {
   revalidatePath("/admin/bookings");
   revalidatePath("/bookings");
   revalidatePath("/me");
+  revalidatePath("/equipment");
   revalidatePath(`/equipment/${windowRow.equipment_id}`);
   return { ok: true };
 }

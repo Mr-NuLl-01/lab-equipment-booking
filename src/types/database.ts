@@ -84,6 +84,8 @@ export type MaintenanceWindow = {
   start_time: string;
   end_time: string;
   status: "active" | "completed" | "cancelled";
+  previous_equipment_status: EquipmentStatus | null;
+  previous_is_bookable: boolean | null;
   completed_at: string | null;
   created_by: string | null;
   created_at: string;

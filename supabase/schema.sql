@@ -137,12 +137,27 @@ create table if not exists public.maintenance_windows (
   start_time timestamptz not null,
   end_time timestamptz not null,
   status text not null default 'active' check (status in ('active', 'completed', 'cancelled')),
+  previous_equipment_status text check (previous_equipment_status is null or previous_equipment_status in ('normal', 'paused', 'maintenance', 'retired')),
+  previous_is_bookable boolean,
   completed_at timestamptz,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (end_time > start_time)
 );
+
+alter table public.maintenance_windows
+  add column if not exists previous_equipment_status text;
+
+alter table public.maintenance_windows
+  add column if not exists previous_is_bookable boolean;
+
+alter table public.maintenance_windows
+  drop constraint if exists maintenance_windows_previous_equipment_status_check;
+
+alter table public.maintenance_windows
+  add constraint maintenance_windows_previous_equipment_status_check
+  check (previous_equipment_status is null or previous_equipment_status in ('normal', 'paused', 'maintenance', 'retired'));
 
 alter table public.maintenance_tasks
   add column if not exists task_type text not null default 'maintenance';

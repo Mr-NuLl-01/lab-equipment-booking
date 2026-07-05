@@ -133,7 +133,7 @@ export function MaintenanceWindowForm({
         setMessage(undefined);
         startTransition(async () => {
           const result = await createMaintenanceWindowAction(formData);
-          setMessage(result?.error || "已创建维护窗口，并取消冲突预约");
+          setMessage(result?.error || "已创建停机维护窗口，设备将暂停预约并取消冲突预约");
         });
       }}
     >
@@ -171,6 +171,9 @@ export function MaintenanceWindowForm({
       <div className="md:col-span-2">
         <FieldError message={message?.startsWith("已") ? undefined : message} />
         {message?.startsWith("已") ? <p className="mb-2 text-sm text-teal-700">{message}</p> : null}
+        <p className="mb-2 text-xs text-slate-500">
+          维护窗口会暂停对应设备预约；周期提醒只提醒管理员检查，不会停机。
+        </p>
         <Button type="submit" disabled={pending} className="w-full sm:w-auto">
           {pending ? "创建中..." : "创建维护窗口"}
         </Button>

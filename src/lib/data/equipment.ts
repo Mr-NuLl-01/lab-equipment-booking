@@ -257,3 +257,20 @@ export async function listMaintenanceWindows() {
   }
   return data;
 }
+
+export async function listActiveMaintenanceWindows(equipmentId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("maintenance_windows")
+    .select("start_time,end_time")
+    .eq("equipment_id", equipmentId)
+    .eq("status", "active")
+    .gt("end_time", new Date().toISOString())
+    .order("start_time", { ascending: true });
+
+  if (error) {
+    if (error.message.includes("maintenance_windows")) return [];
+    throw new Error(error.message);
+  }
+  return data;
+}
