@@ -137,6 +137,18 @@ export function BookingForm({
     return startMinute >= selectedStartMinute && endMinute <= selectedEndMinute;
   }
 
+  function getRelativeSlotMinutes(start: string, end: string) {
+    const selectedStartMinute = toMinutes(selectedStart);
+    let startMinute = toMinutes(start);
+    let endMinute = toMinutes(end);
+    if (startMinute < selectedStartMinute) {
+      startMinute += 24 * 60;
+      endMinute += 24 * 60;
+    }
+    if (endMinute <= startMinute) endMinute += 24 * 60;
+    return { startMinute, endMinute };
+  }
+
   function rangeHasBookedSlot(start: string, end: string) {
     const startMinute = toMinutes(start);
     let endMinute = toMinutes(end);
@@ -164,7 +176,22 @@ export function BookingForm({
     }
 
     if (isSlotSelected(start, end)) {
-      setHasSelectedSlot(false);
+      const selectedStartMinute = toMinutes(selectedStart);
+      let selectedEndMinute = toMinutes(selectedEnd);
+      if (selectedEndMinute <= selectedStartMinute) selectedEndMinute += 24 * 60;
+      const clicked = getRelativeSlotMinutes(start, end);
+
+      if (clicked.startMinute === selectedStartMinute) {
+        setHasSelectedSlot(false);
+        return;
+      }
+
+      if (clicked.endMinute === selectedEndMinute) {
+        setSelectedEnd(start);
+        return;
+      }
+
+      setSelectedStart(start);
       return;
     }
 
@@ -321,7 +348,7 @@ export function BookingForm({
             </div>
             {hasSelectedSlot ? (
               <p className="text-center text-sm text-slate-600">
-                已选：{selectedStart} - {toMinutes(selectedEnd) <= toMinutes(selectedStart) ? "次日 " : ""}{selectedEnd}；点击绿色时段可取消选择
+                已选：{selectedStart} - {toMinutes(selectedEnd) <= toMinutes(selectedStart) ? "次日 " : ""}{selectedEnd}；点击起点取消，点击区间内时段可调整范围
               </p>
             ) : (
               <p className="text-center text-sm text-slate-600">请选择一个半小时时段；再次点击可扩展为连续预约。</p>
