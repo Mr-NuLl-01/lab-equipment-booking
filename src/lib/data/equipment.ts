@@ -262,7 +262,7 @@ export async function listActiveMaintenanceWindows(equipmentId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("maintenance_windows")
-    .select("start_time,end_time")
+    .select("start_time,end_time,reason")
     .eq("equipment_id", equipmentId)
     .eq("status", "active")
     .gt("end_time", new Date().toISOString())

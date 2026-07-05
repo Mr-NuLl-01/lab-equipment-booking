@@ -14,7 +14,7 @@ type BookingFormProps = {
   initialDate?: string;
   initialStart?: string;
   initialEnd?: string;
-  bookedRanges?: { start_time: string; end_time: string }[];
+  bookedRanges?: BookedRange[];
   recentBookings?: {
     id: string;
     start_time: string;
@@ -23,6 +23,16 @@ type BookingFormProps = {
     status: string;
     cancel_reason: string | null;
   }[];
+};
+
+type BookedRange = {
+  start_time: string;
+  end_time: string;
+  kind?: "booking" | "maintenance";
+  bookerName?: string;
+  bookerEmail?: string;
+  purpose?: string;
+  note?: string | null;
 };
 
 const evaporationSources = [
@@ -97,14 +107,51 @@ export function BookingForm({
     return value;
   }
 
-  function isSlotBooked(startMinutes: number, endMinutes: number) {
+  function getBookedRangeForSlot(startMinutes: number, endMinutes: number) {
     const slotStart = dateFromDayMinutes(startMinutes);
     const slotEnd = dateFromDayMinutes(endMinutes);
-    return bookedRanges.some((booking) => {
+    return bookedRanges.find((booking) => {
       const bookingStart = new Date(booking.start_time);
       const bookingEnd = new Date(booking.end_time);
       return slotStart < bookingEnd && slotEnd > bookingStart;
+    }) || null;
+  }
+
+  function isSlotBooked(startMinutes: number, endMinutes: number) {
+    return Boolean(getBookedRangeForSlot(startMinutes, endMinutes));
+  }
+
+  function describeBookedRange(range: BookedRange) {
+    const start = new Date(range.start_time).toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
+    const end = new Date(range.end_time).toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    if (range.kind === "maintenance") {
+      return [`该时段为维护时间`, `${start} - ${end}`, range.note ? `原因：${range.note}` : ""]
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    return [
+      `该时段已被预约`,
+      `${start} - ${end}`,
+      range.bookerName ? `预约人：${range.bookerName}` : "",
+      range.bookerEmail ? `邮箱：${range.bookerEmail}` : "",
+      range.purpose ? `用途：${range.purpose}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   function isMyConfirmedSlot(startMinutes: number, endMinutes: number) {
@@ -324,15 +371,27 @@ export function BookingForm({
                   hasSelectedSlot && slot.startMinutes < selectedStartMinute
                     ? slot.endMinutes + 24 * 60
                     : slot.endMinutes;
-                const booked = isSlotBooked(slotStartMinutes, slotEndMinutes);
+                const bookedRange = getBookedRangeForSlot(slotStartMinutes, slotEndMinutes);
+                const booked = Boolean(bookedRange);
                 const myBooked = isMyConfirmedSlot(slotStartMinutes, slotEndMinutes);
                 const selected = hasSelectedSlot && isSlotSelected(slot.start, slot.end);
+                const bookedLabel =
+                  bookedRange?.kind === "maintenance"
+                    ? "维护"
+                    : bookedRange?.bookerName || "已约";
                 return (
                   <button
                     key={slot.start}
                     type="button"
-                    disabled={booked}
-                    onClick={() => selectSlot(slot.start, slot.end)}
+                    aria-disabled={booked}
+                    title={bookedRange ? describeBookedRange(bookedRange) : undefined}
+                    onClick={() => {
+                      if (bookedRange) {
+                        window.alert(describeBookedRange(bookedRange));
+                        return;
+                      }
+                      selectSlot(slot.start, slot.end);
+                    }}
                     className={[
                       "min-h-10 rounded-md border border-slate-200 px-1.5 py-2 text-sm",
                       myBooked ? "bg-emerald-700 text-white" : "",
@@ -341,7 +400,9 @@ export function BookingForm({
                       !booked && !selected ? "bg-white text-blue-700" : "",
                     ].join(" ")}
                   >
-                    {myBooked ? `${slot.label} 我的` : booked ? `${slot.label} 已约` : slot.label}
+                    <span className="block">{slot.label}</span>
+                    {myBooked ? <span className="block text-xs">我的</span> : null}
+                    {booked && !myBooked ? <span className="block truncate text-xs">{bookedLabel}</span> : null}
                   </button>
                 );
               })}

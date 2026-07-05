@@ -29,6 +29,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
     equipment.requires_certification &&
     profile.role !== "admin" &&
     (profile.status !== "active" || !hasEquipmentPermission);
+  const canViewBookingOwner = profile.role === "admin" || profile.status === "active";
 
   return (
     <main className="safe-page space-y-4">
@@ -62,13 +63,27 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
             <BookingForm
               equipmentId={equipment.id}
               equipmentCode={equipment.code}
-              bookedRanges={bookings.map((booking) => ({
-                start_time: booking.start_time,
-                end_time: booking.end_time,
-              })).concat(maintenanceWindows.map((window) => ({
-                start_time: window.start_time,
-                end_time: window.end_time,
-              })))}
+              bookedRanges={[
+                ...bookings.map((booking) => {
+                  const bookingProfile = booking.profile as { full_name?: string | null; email?: string | null } | null;
+                  return {
+                    start_time: booking.start_time,
+                    end_time: booking.end_time,
+                    kind: "booking" as const,
+                    bookerName: canViewBookingOwner
+                      ? bookingProfile?.full_name || bookingProfile?.email || "未填写姓名"
+                      : undefined,
+                    bookerEmail: canViewBookingOwner ? bookingProfile?.email || undefined : undefined,
+                    purpose: canViewBookingOwner ? booking.purpose : undefined,
+                  };
+                }),
+                ...maintenanceWindows.map((maintenance) => ({
+                  start_time: maintenance.start_time,
+                  end_time: maintenance.end_time,
+                  kind: "maintenance" as const,
+                  note: maintenance.reason,
+                })),
+              ]}
               recentBookings={myEquipmentBookings.map((booking) => ({
                 id: booking.id,
                 start_time: booking.start_time,
