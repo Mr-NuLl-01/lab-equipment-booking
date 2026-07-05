@@ -110,11 +110,12 @@ export function BookingForm({
   function getBookedRangeForSlot(startMinutes: number, endMinutes: number) {
     const slotStart = dateFromDayMinutes(startMinutes);
     const slotEnd = dateFromDayMinutes(endMinutes);
-    return bookedRanges.find((booking) => {
+    const overlappingRanges = bookedRanges.filter((booking) => {
       const bookingStart = new Date(booking.start_time);
       const bookingEnd = new Date(booking.end_time);
       return slotStart < bookingEnd && slotEnd > bookingStart;
-    }) || null;
+    });
+    return overlappingRanges.find((booking) => booking.kind === "maintenance") || overlappingRanges[0] || null;
   }
 
   function isSlotBooked(startMinutes: number, endMinutes: number) {
@@ -352,6 +353,10 @@ export function BookingForm({
                 不可预约
               </span>
               <span className="inline-flex items-center gap-1">
+                <span className="size-3 rounded-sm bg-red-600" />
+                维护中
+              </span>
+              <span className="inline-flex items-center gap-1">
                 <span className="size-3 rounded-sm bg-lime-300" />
                 已选中
               </span>
@@ -373,11 +378,12 @@ export function BookingForm({
                     : slot.endMinutes;
                 const bookedRange = getBookedRangeForSlot(slotStartMinutes, slotEndMinutes);
                 const booked = Boolean(bookedRange);
+                const maintenanceBlocked = bookedRange?.kind === "maintenance";
                 const myBooked = isMyConfirmedSlot(slotStartMinutes, slotEndMinutes);
                 const selected = hasSelectedSlot && isSlotSelected(slot.start, slot.end);
                 const bookedLabel =
-                  bookedRange?.kind === "maintenance"
-                    ? "维护"
+                  maintenanceBlocked
+                    ? "维护中"
                     : bookedRange?.bookerName || "已约";
                 return (
                   <button
@@ -394,8 +400,9 @@ export function BookingForm({
                     }}
                     className={[
                       "min-h-10 rounded-md border border-slate-200 px-1.5 py-2 text-sm",
-                      myBooked ? "bg-emerald-700 text-white" : "",
-                      booked && !myBooked ? "bg-slate-400 text-white" : "",
+                      myBooked && !maintenanceBlocked ? "bg-emerald-700 text-white" : "",
+                      maintenanceBlocked ? "border-red-600 bg-red-600 text-white" : "",
+                      booked && !myBooked && !maintenanceBlocked ? "bg-slate-400 text-white" : "",
                       selected && !booked ? "bg-lime-300 text-slate-900" : "",
                       !booked && !selected ? "bg-white text-blue-700" : "",
                     ].join(" ")}
