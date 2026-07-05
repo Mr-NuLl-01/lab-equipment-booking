@@ -163,6 +163,11 @@ export function BookingForm({
       return;
     }
 
+    if (isSlotSelected(start, end)) {
+      setHasSelectedSlot(false);
+      return;
+    }
+
     const clickedStart = toMinutes(start);
     const currentStart = toMinutes(selectedStart);
     const nextStart = clickedStart < currentStart ? start : selectedStart;
@@ -294,7 +299,7 @@ export function BookingForm({
                     : slot.endMinutes;
                 const booked = isSlotBooked(slotStartMinutes, slotEndMinutes);
                 const myBooked = isMyConfirmedSlot(slotStartMinutes, slotEndMinutes);
-                const selected = isSlotSelected(slot.start, slot.end);
+                const selected = hasSelectedSlot && isSlotSelected(slot.start, slot.end);
                 return (
                   <button
                     key={slot.start}
@@ -316,7 +321,7 @@ export function BookingForm({
             </div>
             {hasSelectedSlot ? (
               <p className="text-center text-sm text-slate-600">
-                已选：{selectedStart} - {toMinutes(selectedEnd) <= toMinutes(selectedStart) ? "次日 " : ""}{selectedEnd}
+                已选：{selectedStart} - {toMinutes(selectedEnd) <= toMinutes(selectedStart) ? "次日 " : ""}{selectedEnd}；点击绿色时段可取消选择
               </p>
             ) : (
               <p className="text-center text-sm text-slate-600">请选择一个半小时时段；再次点击可扩展为连续预约。</p>
