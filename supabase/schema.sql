@@ -24,9 +24,17 @@ create table if not exists public.equipment (
   min_booking_minutes int not null default 30 check (min_booking_minutes >= 30 and min_booking_minutes % 30 = 0),
   max_booking_minutes int check (max_booking_minutes is null or (max_booking_minutes >= 30 and max_booking_minutes % 30 = 0)),
   is_bookable boolean not null default true,
+  is_pinned boolean not null default false,
+  sort_order int not null default 1000,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.equipment
+  add column if not exists is_pinned boolean not null default false;
+
+alter table public.equipment
+  add column if not exists sort_order int not null default 1000;
 
 create table if not exists public.equipment_permissions (
   user_id uuid not null references public.profiles(id) on delete cascade,

@@ -11,6 +11,8 @@ export const equipmentSchema = z.object({
   status: z.enum(["normal", "paused", "maintenance", "retired"]),
   isBookable: z.coerce.boolean(),
   requiresCertification: z.coerce.boolean(),
+  isPinned: z.coerce.boolean(),
+  sortOrder: z.coerce.number().int().min(0),
   minBookingMinutes: z.coerce.number().int().min(30),
   maxBookingMinutes: z.coerce.number().int().min(30).optional().or(z.literal("")),
 });

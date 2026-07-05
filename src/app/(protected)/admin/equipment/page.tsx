@@ -7,7 +7,7 @@ import { listEquipment } from "@/lib/data/equipment";
 
 export default async function AdminEquipmentPage() {
   await requireAdmin();
-  const equipment = await listEquipment({ includeRetired: true });
+  const equipment = await listEquipment();
 
   return (
     <main className="safe-page space-y-5">

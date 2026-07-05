@@ -68,6 +68,8 @@ export async function upsertEquipmentAction(formData: FormData) {
     status: formData.get("status"),
     isBookable: formData.get("isBookable") === "on",
     requiresCertification: formData.get("requiresCertification") === "on",
+    isPinned: formData.get("isPinned") === "on",
+    sortOrder: formData.get("sortOrder") || 1000,
     minBookingMinutes: formData.get("minBookingMinutes"),
     maxBookingMinutes: formData.get("maxBookingMinutes") || "",
   };
@@ -85,6 +87,8 @@ export async function upsertEquipmentAction(formData: FormData) {
     status: parsed.data.status,
     is_bookable: parsed.data.isBookable,
     requires_certification: parsed.data.requiresCertification,
+    is_pinned: parsed.data.isPinned,
+    sort_order: parsed.data.sortOrder,
     min_booking_minutes: parsed.data.minBookingMinutes,
     max_booking_minutes:
       parsed.data.maxBookingMinutes === "" ? null : parsed.data.maxBookingMinutes,
@@ -95,7 +99,12 @@ export async function upsertEquipmentAction(formData: FormData) {
     : supabase.from("equipment").insert(payload);
 
   const { error } = await request;
-  if (error) return { error: "保存设备失败：" + error.message };
+  if (error) {
+    if (error.message.includes("is_pinned") || error.message.includes("sort_order")) {
+      return { error: "保存设备失败：设备排序字段尚未添加，请先执行新版 supabase/schema.sql" };
+    }
+    return { error: "保存设备失败：" + error.message };
+  }
   revalidatePath("/admin/equipment");
   revalidatePath("/");
   return { ok: true };

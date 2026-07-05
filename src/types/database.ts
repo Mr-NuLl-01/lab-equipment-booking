@@ -28,6 +28,8 @@ export type Equipment = {
   min_booking_minutes: number;
   max_booking_minutes: number | null;
   is_bookable: boolean;
+  is_pinned: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 };

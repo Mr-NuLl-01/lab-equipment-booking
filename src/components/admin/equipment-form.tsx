@@ -55,9 +55,15 @@ export function EquipmentForm({ equipment }: { equipment?: Equipment }) {
         <Label>最大预约分钟</Label>
         <Input name="maxBookingMinutes" type="number" min={30} step={30} defaultValue={equipment?.max_booking_minutes || ""} />
       </div>
+      <div>
+        <Label>排序值</Label>
+        <Input name="sortOrder" type="number" min={0} step={1} defaultValue={equipment?.sort_order ?? 1000} />
+        <p className="mt-1 text-xs text-slate-500">数字越小越靠前；置顶设备优先显示。</p>
+      </div>
       <div className="flex items-center gap-4 pt-7">
         <label className="flex items-center gap-2 text-sm"><input name="isBookable" type="checkbox" defaultChecked={equipment?.is_bookable ?? true} />开放预约</label>
         <label className="flex items-center gap-2 text-sm"><input name="requiresCertification" type="checkbox" defaultChecked={equipment?.requires_certification ?? true} />需要认证</label>
+        <label className="flex items-center gap-2 text-sm"><input name="isPinned" type="checkbox" defaultChecked={equipment?.is_pinned ?? false} />置顶</label>
       </div>
       <div className="md:col-span-2">
         <Label>描述</Label>

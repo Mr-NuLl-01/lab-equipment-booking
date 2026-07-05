@@ -19,7 +19,26 @@ export async function listEquipment(options?: { includeRetired?: boolean }) {
   if (!options?.includeRetired) query = query.neq("status", "retired");
   const { data, error } = await query.returns<Equipment[]>();
   if (error) throw new Error(error.message);
-  return data;
+  return data.sort((a, b) => {
+    const aPinned = a.is_pinned ?? false;
+    const bPinned = b.is_pinned ?? false;
+    const aOrder = a.sort_order ?? 1000;
+    const bOrder = b.sort_order ?? 1000;
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.name.localeCompare(b.name, "zh-CN");
+  });
+}
+
+export async function listAlertEquipmentIds() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("issue_reports")
+    .select("equipment_id")
+    .in("status", ["open", "in_progress"]);
+
+  if (error) throw new Error(error.message);
+  return new Set((data || []).map((item) => item.equipment_id as string));
 }
 
 export async function getEquipment(id: string) {
