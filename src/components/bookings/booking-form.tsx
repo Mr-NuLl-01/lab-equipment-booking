@@ -367,19 +367,10 @@ export function BookingForm({
             </div>
             <div className="grid grid-cols-2 gap-1.5 text-center text-sm min-[430px]:grid-cols-3 sm:grid-cols-4">
               {hourSlots.map((slot) => {
-                const selectedStartMinute = toMinutes(selectedStart);
-                const slotStartMinutes =
-                  hasSelectedSlot && slot.startMinutes < selectedStartMinute
-                    ? slot.startMinutes + 24 * 60
-                    : slot.startMinutes;
-                const slotEndMinutes =
-                  hasSelectedSlot && slot.startMinutes < selectedStartMinute
-                    ? slot.endMinutes + 24 * 60
-                    : slot.endMinutes;
-                const bookedRange = getBookedRangeForSlot(slotStartMinutes, slotEndMinutes);
+                const bookedRange = getBookedRangeForSlot(slot.startMinutes, slot.endMinutes);
                 const booked = Boolean(bookedRange);
                 const maintenanceBlocked = bookedRange?.kind === "maintenance";
-                const myBooked = isMyConfirmedSlot(slotStartMinutes, slotEndMinutes);
+                const myBooked = isMyConfirmedSlot(slot.startMinutes, slot.endMinutes);
                 const selected = hasSelectedSlot && isSlotSelected(slot.start, slot.end);
                 const bookedLabel =
                   maintenanceBlocked
