@@ -44,6 +44,15 @@ create table if not exists public.equipment_permissions (
   primary key (user_id, equipment_id)
 );
 
+create table if not exists public.equipment_maintenance_links (
+  source_equipment_id uuid not null references public.equipment(id) on delete cascade,
+  linked_equipment_id uuid not null references public.equipment(id) on delete cascade,
+  created_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  primary key (source_equipment_id, linked_equipment_id),
+  check (source_equipment_id <> linked_equipment_id)
+);
+
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),
   equipment_id uuid not null references public.equipment(id) on delete restrict,
@@ -293,6 +302,7 @@ $$;
 alter table public.profiles enable row level security;
 alter table public.equipment enable row level security;
 alter table public.equipment_permissions enable row level security;
+alter table public.equipment_maintenance_links enable row level security;
 alter table public.bookings enable row level security;
 alter table public.issue_reports enable row level security;
 alter table public.maintenance_tasks enable row level security;
@@ -411,6 +421,22 @@ for update using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "equipment permissions admin delete" on public.equipment_permissions;
 create policy "equipment permissions admin delete" on public.equipment_permissions
+for delete using (public.is_admin());
+
+drop policy if exists "equipment maintenance links admin select" on public.equipment_maintenance_links;
+create policy "equipment maintenance links admin select" on public.equipment_maintenance_links
+for select using (public.is_admin());
+
+drop policy if exists "equipment maintenance links admin insert" on public.equipment_maintenance_links;
+create policy "equipment maintenance links admin insert" on public.equipment_maintenance_links
+for insert with check (public.is_admin());
+
+drop policy if exists "equipment maintenance links admin update" on public.equipment_maintenance_links;
+create policy "equipment maintenance links admin update" on public.equipment_maintenance_links
+for update using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "equipment maintenance links admin delete" on public.equipment_maintenance_links;
+create policy "equipment maintenance links admin delete" on public.equipment_maintenance_links
 for delete using (public.is_admin());
 
 drop policy if exists "issues read own or admin" on public.issue_reports;

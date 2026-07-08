@@ -98,3 +98,10 @@ export type EquipmentPermission = {
   granted_by: string | null;
   granted_at: string;
 };
+
+export type EquipmentMaintenanceLink = {
+  source_equipment_id: string;
+  linked_equipment_id: string;
+  created_by: string | null;
+  created_at: string;
+};

@@ -110,6 +110,45 @@ export async function upsertEquipmentAction(formData: FormData) {
   return { ok: true };
 }
 
+export async function updateEquipmentMaintenanceLinksAction(formData: FormData) {
+  const { user } = await requireAdmin();
+  const sourceEquipmentId = String(formData.get("sourceEquipmentId") || "");
+  const linkedEquipmentIds = formData
+    .getAll("linkedEquipmentId")
+    .map(String)
+    .filter((id) => id && id !== sourceEquipmentId);
+
+  if (!sourceEquipmentId) return { error: "缺少设备 ID" };
+
+  const supabase = await createClient();
+  const { error: deleteError } = await supabase
+    .from("equipment_maintenance_links")
+    .delete()
+    .eq("source_equipment_id", sourceEquipmentId);
+
+  if (deleteError) {
+    if (deleteError.message.includes("equipment_maintenance_links")) {
+      return { error: "设备联动表不存在。请先在 Supabase SQL Editor 执行新版 supabase/schema.sql。" };
+    }
+    return { error: "清空原联动关系失败：" + deleteError.message };
+  }
+
+  if (linkedEquipmentIds.length > 0) {
+    const { error: insertError } = await supabase.from("equipment_maintenance_links").insert(
+      linkedEquipmentIds.map((linkedEquipmentId) => ({
+        source_equipment_id: sourceEquipmentId,
+        linked_equipment_id: linkedEquipmentId,
+        created_by: user.id,
+      })),
+    );
+    if (insertError) return { error: "保存联动关系失败：" + insertError.message };
+  }
+
+  revalidatePath("/admin/equipment");
+  revalidatePath("/admin/maintenance");
+  return { ok: true };
+}
+
 export async function removeEquipmentAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") || "");
@@ -256,73 +295,115 @@ export async function createMaintenanceWindowAction(formData: FormData) {
   const supabase = await createClient();
   const { data: equipment, error: equipmentError } = await supabase
     .from("equipment")
-    .select("status,is_bookable")
+    .select("id,name,code,status,is_bookable")
     .eq("id", equipmentId)
-    .single<{ status: "normal" | "paused" | "maintenance" | "retired"; is_bookable: boolean }>();
+    .single<{
+      id: string;
+      name: string;
+      code: string;
+      status: "normal" | "paused" | "maintenance" | "retired";
+      is_bookable: boolean;
+    }>();
   if (equipmentError) return { error: "读取设备状态失败：" + equipmentError.message };
 
-  let windowInsert = await supabase
-    .from("maintenance_windows")
-    .insert({
-      equipment_id: equipmentId,
-      reason,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      previous_equipment_status: equipment.status,
-      previous_is_bookable: equipment.is_bookable,
-      created_by: user.id,
-    })
-    .select("id")
-    .single<{ id: string }>();
+  const linkLookup = await supabase
+    .from("equipment_maintenance_links")
+    .select("linked_equipment_id")
+    .eq("source_equipment_id", equipmentId);
 
-  if (
-    windowInsert.error &&
-    (windowInsert.error.message.includes("previous_equipment_status") ||
-      windowInsert.error.message.includes("previous_is_bookable"))
-  ) {
-    windowInsert = await supabase
+  if (linkLookup.error && !linkLookup.error.message.includes("equipment_maintenance_links")) {
+    return { error: "读取设备联动关系失败：" + linkLookup.error.message };
+  }
+
+  const linkedEquipmentIds = linkLookup.error
+    ? []
+    : (linkLookup.data || []).map((item) => item.linked_equipment_id as string);
+  const affectedEquipmentIds = [...new Set([equipmentId, ...linkedEquipmentIds])];
+
+  const { data: affectedEquipment, error: affectedEquipmentError } = await supabase
+    .from("equipment")
+    .select("id,name,code,status,is_bookable")
+    .in("id", affectedEquipmentIds)
+    .returns<
+      {
+        id: string;
+        name: string;
+        code: string;
+        status: "normal" | "paused" | "maintenance" | "retired";
+        is_bookable: boolean;
+      }[]
+    >();
+  if (affectedEquipmentError) return { error: "读取联动设备失败：" + affectedEquipmentError.message };
+
+  const affectedById = new Map((affectedEquipment || []).map((item) => [item.id, item]));
+  const createdWindowEquipmentIds: string[] = [];
+
+  for (const affectedId of affectedEquipmentIds) {
+    const affected = affectedById.get(affectedId);
+    if (!affected) continue;
+    const windowReason =
+      affectedId === equipmentId
+        ? reason
+        : `联动维护（${equipment.name} ${equipment.code}）：${reason}`;
+
+    let windowInsert = await supabase
       .from("maintenance_windows")
       .insert({
-        equipment_id: equipmentId,
-        reason,
+        equipment_id: affectedId,
+        reason: windowReason,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
+        previous_equipment_status: affected.status,
+        previous_is_bookable: affected.is_bookable,
         created_by: user.id,
       })
       .select("id")
       .single<{ id: string }>();
+
+    if (
+      windowInsert.error &&
+      (windowInsert.error.message.includes("previous_equipment_status") ||
+        windowInsert.error.message.includes("previous_is_bookable"))
+    ) {
+      windowInsert = await supabase
+        .from("maintenance_windows")
+        .insert({
+          equipment_id: affectedId,
+          reason: windowReason,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          created_by: user.id,
+        })
+        .select("id")
+        .single<{ id: string }>();
+    }
+
+    const { data: windowRow, error: windowError } = windowInsert;
+    if (windowError) return { error: `创建 ${affected.name} 维护窗口失败：${windowError.message}` };
+
+    const marker = `维护窗口:${windowRow.id}:${windowReason}`;
+    const { error: bookingError } = await supabase
+      .from("bookings")
+      .update({
+        status: "admin_cancelled",
+        cancel_reason: marker,
+        cancelled_by: user.id,
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq("equipment_id", affectedId)
+      .eq("status", "confirmed")
+      .lt("start_time", end.toISOString())
+      .gt("end_time", start.toISOString());
+    if (bookingError) return { error: `${affected.name} 维护窗口已创建，但取消预约失败：${bookingError.message}` };
+    createdWindowEquipmentIds.push(affectedId);
   }
-
-  const { data: windowRow, error: windowError } = windowInsert;
-  if (windowError) return { error: "创建维护窗口失败：" + windowError.message };
-
-  const { error: equipmentUpdateError } = await supabase
-    .from("equipment")
-    .update({ status: "maintenance", is_bookable: false })
-    .eq("id", equipmentId);
-  if (equipmentUpdateError) return { error: "维护窗口已创建，但设备停机失败：" + equipmentUpdateError.message };
-
-  const marker = `维护窗口:${windowRow.id}:${reason}`;
-  const { error: bookingError } = await supabase
-    .from("bookings")
-    .update({
-      status: "admin_cancelled",
-      cancel_reason: marker,
-      cancelled_by: user.id,
-      cancelled_at: new Date().toISOString(),
-    })
-    .eq("equipment_id", equipmentId)
-    .eq("status", "confirmed")
-    .lt("start_time", end.toISOString())
-    .gt("end_time", start.toISOString());
-  if (bookingError) return { error: "维护窗口已创建，但取消预约失败：" + bookingError.message };
 
   revalidatePath("/admin/maintenance");
   revalidatePath("/admin/bookings");
   revalidatePath("/bookings");
   revalidatePath("/me");
   revalidatePath("/equipment");
-  revalidatePath(`/equipment/${equipmentId}`);
+  createdWindowEquipmentIds.forEach((id) => revalidatePath(`/equipment/${id}`));
   return { ok: true };
 }
 

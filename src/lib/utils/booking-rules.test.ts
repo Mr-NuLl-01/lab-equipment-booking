@@ -20,7 +20,7 @@ describe("validateBookingTime", () => {
   it("allows an overnight booking within 24 hours", () => {
     const result = validateBookingTime({
       equipmentId: "57581182-6a04-4b2a-8cce-fa51b8a717ac",
-      date: "2026-07-05",
+      date: "2099-07-05",
       startTime: "23:30",
       endTime: "00:30",
       purpose: "overnight use",

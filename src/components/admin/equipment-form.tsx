@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/form";
-import { removeEquipmentAction, upsertEquipmentAction } from "@/lib/actions/admin";
+import { removeEquipmentAction, updateEquipmentMaintenanceLinksAction, upsertEquipmentAction } from "@/lib/actions/admin";
 import type { Equipment } from "@/types/database";
 
 export function EquipmentForm({ equipment }: { equipment?: Equipment }) {
@@ -104,6 +104,60 @@ export function RemoveEquipmentForm({ equipment }: { equipment: Equipment }) {
       </Button>
       <p className="text-xs text-slate-500">移除会将设备设为停用并关闭预约，不删除历史预约。</p>
       {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+    </form>
+  );
+}
+
+export function EquipmentMaintenanceLinkForm({
+  equipment,
+  allEquipment,
+  linkedEquipmentIds,
+}: {
+  equipment: Equipment;
+  allEquipment: Equipment[];
+  linkedEquipmentIds: string[];
+}) {
+  const [message, setMessage] = useState<string>();
+  const [pending, startTransition] = useTransition();
+  const candidates = allEquipment.filter((item) => item.id !== equipment.id && item.status !== "retired");
+
+  return (
+    <form
+      className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+      action={(formData) => {
+        setMessage(undefined);
+        startTransition(async () => {
+          const result = await updateEquipmentMaintenanceLinksAction(formData);
+          setMessage(result?.error || "已保存联动设备");
+        });
+      }}
+    >
+      <input type="hidden" name="sourceEquipmentId" value={equipment.id} />
+      <div>
+        <h3 className="font-medium">维护联动设备</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          维护该设备时，勾选设备会自动创建同时间段维护窗口。例如手套箱维护时同步停用内部蒸镀机。
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {candidates.map((item) => (
+          <label key={item.id} className="flex min-h-11 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm">
+            <input
+              name="linkedEquipmentId"
+              type="checkbox"
+              value={item.id}
+              defaultChecked={linkedEquipmentIds.includes(item.id)}
+            />
+            <span>{item.name}（{item.code}）</span>
+          </label>
+        ))}
+        {candidates.length === 0 ? <p className="text-sm text-slate-600">暂无可联动设备。</p> : null}
+      </div>
+      <FieldError message={message?.startsWith("已") ? undefined : message} />
+      {message?.startsWith("已") ? <p className="text-sm text-teal-700">{message}</p> : null}
+      <Button type="submit" variant="secondary" disabled={pending} className="w-full sm:w-auto">
+        {pending ? "保存中..." : "保存联动设备"}
+      </Button>
     </form>
   );
 }

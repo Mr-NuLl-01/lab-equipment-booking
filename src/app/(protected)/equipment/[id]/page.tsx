@@ -24,6 +24,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
     .filter((booking) => booking.equipment_id === id)
     .slice(0, 6);
   const canBook = equipment.status === "normal" && equipment.is_bookable;
+  const canViewBookingGrid = canBook || equipment.status === "maintenance";
   const hasEquipmentPermission = permissions.some((permission) => permission.equipment_id === id);
   const certificationBlocked =
     equipment.requires_certification &&
@@ -56,10 +57,10 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
         <CardHeader><h2 className="font-semibold">立即预约</h2></CardHeader>
         <CardContent>
           {!canBook ? <p className="text-slate-600">该设备当前不可预约。</p> : null}
-          {canBook && certificationBlocked ? (
+          {canViewBookingGrid && certificationBlocked ? (
             <p className="text-slate-600">该设备需要账号 active 且获得管理员单独授权后才能预约。你仍可查看设备信息和近期预约。</p>
           ) : null}
-          {canBook && !certificationBlocked ? (
+          {canViewBookingGrid && !certificationBlocked ? (
             <BookingForm
               equipmentId={equipment.id}
               equipmentCode={equipment.code}

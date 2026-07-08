@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   Booking,
   Equipment,
+  EquipmentMaintenanceLink,
   EquipmentPermission,
   IssueReport,
   MaintenanceTask,
@@ -28,6 +29,20 @@ export async function listEquipment(options?: { includeRetired?: boolean }) {
     if (aOrder !== bOrder) return aOrder - bOrder;
     return a.name.localeCompare(b.name, "zh-CN");
   });
+}
+
+export async function listEquipmentMaintenanceLinks() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("equipment_maintenance_links")
+    .select("*")
+    .returns<EquipmentMaintenanceLink[]>();
+
+  if (error) {
+    if (error.message.includes("equipment_maintenance_links")) return [];
+    throw new Error(error.message);
+  }
+  return data;
 }
 
 export async function listAlertEquipmentIds() {

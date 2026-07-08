@@ -1,13 +1,16 @@
 import { AdminNav } from "@/components/admin/admin-nav";
-import { EquipmentForm, RemoveEquipmentForm } from "@/components/admin/equipment-form";
+import { EquipmentForm, EquipmentMaintenanceLinkForm, RemoveEquipmentForm } from "@/components/admin/equipment-form";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireAdmin } from "@/lib/data/auth";
-import { listEquipment } from "@/lib/data/equipment";
+import { listEquipment, listEquipmentMaintenanceLinks } from "@/lib/data/equipment";
 
 export default async function AdminEquipmentPage() {
   await requireAdmin();
-  const equipment = await listEquipment();
+  const [equipment, maintenanceLinks] = await Promise.all([
+    listEquipment(),
+    listEquipmentMaintenanceLinks(),
+  ]);
 
   return (
     <main className="safe-page space-y-5">
@@ -30,6 +33,13 @@ export default async function AdminEquipmentPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <EquipmentForm equipment={item} />
+              <EquipmentMaintenanceLinkForm
+                equipment={item}
+                allEquipment={equipment}
+                linkedEquipmentIds={maintenanceLinks
+                  .filter((link) => link.source_equipment_id === item.id)
+                  .map((link) => link.linked_equipment_id)}
+              />
               {item.status !== "retired" ? <RemoveEquipmentForm equipment={item} /> : null}
             </CardContent>
           </Card>
