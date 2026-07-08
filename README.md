@@ -20,6 +20,10 @@
 5. 启动开发服务：`npm run dev`
 6. 构建检查：`npm run lint && npm run build && npm run test`
 
+## 作为模板复用
+
+如果要给其他课题组 fork 并快速部署一套独立系统，请查看 `docs/CODEX_TEMPLATE_DEPLOYMENT.md`。该文档包含模板仓库打包方式，以及可直接复制给另一个 Codex 执行的 GitHub、Supabase、Vercel、Cloudflare 和域名配置任务书。
+
 ## 环境变量
 
 - `NEXT_PUBLIC_SUPABASE_URL`：Supabase 项目根 URL，例如 `https://your-project.supabase.co`，不要填写 `/rest/v1` 或 `/auth/v1` 路径。
