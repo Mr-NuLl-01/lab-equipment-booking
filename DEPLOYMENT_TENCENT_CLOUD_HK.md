@@ -67,7 +67,7 @@ docker compose version
 如果 GitHub 仓库是私有仓库，推荐先在 GitHub 创建 deploy key，或用 GitHub CLI 登录。最简单的方式是先用 HTTPS token 克隆：
 
 ```bash
-git clone https://github.com/Mr-NuLl-01/lab-equipment-booking.git
+git clone https://github.com/<OWNER>/<REPO>.git
 cd lab-equipment-booking
 ```
 

@@ -478,19 +478,19 @@ for update using (public.is_admin()) with check (public.is_admin());
 
 insert into public.equipment (name, code, location, category, description, usage_notes, status, is_bookable, requires_certification)
 values
-  ('真空蒸镀仪', 'EVAP-01', '洁净间 A101', '薄膜制备', '用于金属电极和功能层蒸镀。', '预约前确认坩埚、真空泵状态和冷却水。使用后填写设备记录本。', 'normal', true, true),
-  ('手套箱', 'GB-01', '材料实验室 B203', '环境控制', '用于惰性气氛样品处理。', '进入前检查氧水值，严禁携带挥发性溶剂。', 'normal', true, true),
-  ('台式离心机', 'CF-01', '生化间 C305', '样品处理', '常规样品离心。', '使用前确认转子平衡，结束后清洁腔体。', 'paused', false, false),
-  ('超声清洗机', 'US-01', '公共平台 A区', '样品清洗', '用于常规玻璃器皿和样品架清洗。', '使用后倒掉废液并擦干水槽。', 'normal', true, false)
+  ('示例蒸镀设备', 'EVAP-DEMO', '示例实验室 A101', '薄膜制备', '用于演示需要逐台授权的预约设备。', '示例说明：预约前检查设备状态，使用后填写使用记录。', 'normal', true, true),
+  ('示例手套箱', 'GB-DEMO', '示例实验室 B203', '环境控制', '用于演示联动维护和权限控制。', '示例说明：进入前检查环境参数，遵守设备使用规范。', 'normal', true, true),
+  ('示例离心机', 'CF-DEMO', '示例实验室 C305', '样品处理', '用于演示暂停预约状态。', '示例说明：使用前确认样品平衡，结束后清洁设备。', 'paused', false, false),
+  ('示例清洗设备', 'US-DEMO', '示例平台 D区', '样品清洗', '用于演示注册后即可预约的设备。', '示例说明：使用后清理台面并恢复设备状态。', 'normal', true, false)
 on conflict (code) do nothing;
 
 update public.equipment
 set requires_certification = true
-where code in ('EVAP-01', 'GB-01');
+where code in ('EVAP-DEMO', 'GB-DEMO');
 
 update public.equipment
 set requires_certification = false
-where code in ('CF-01', 'US-01');
+where code in ('CF-DEMO', 'US-DEMO');
 
 insert into public.maintenance_tasks (
   equipment_id,
@@ -519,7 +519,7 @@ cross join (
     ('consumable', '晶振检查', '每隔半个月提醒学生管理员检查晶振是否需要更换；更换或确认无需更换后手动重置计时。', 15),
     ('maintenance', '蒸镀机清理', '每个月提醒清理蒸镀机，并累计显示距离上次清理时间。', 30)
 ) as task(task_type, name, description, interval_days)
-where e.code = 'EVAP-01'
+where e.code = 'EVAP-DEMO'
   and not exists (
     select 1
     from public.maintenance_tasks mt

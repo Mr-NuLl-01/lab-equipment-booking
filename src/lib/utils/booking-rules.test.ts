@@ -3,6 +3,7 @@ import { hasTimeOverlap } from "@/lib/utils/booking-rules";
 import { validateBookingTime } from "@/lib/validators/booking";
 
 const at = (time: string) => new Date(`2026-07-04T${time}:00+08:00`);
+const demoEquipmentId = "00000000-0000-4000-8000-000000000001";
 
 describe("hasTimeOverlap", () => {
   it("detects partial overlaps", () => {
@@ -19,7 +20,7 @@ describe("hasTimeOverlap", () => {
 describe("validateBookingTime", () => {
   it("allows an overnight booking within 24 hours", () => {
     const result = validateBookingTime({
-      equipmentId: "57581182-6a04-4b2a-8cce-fa51b8a717ac",
+      equipmentId: demoEquipmentId,
       date: "2099-07-05",
       startTime: "23:30",
       endTime: "00:30",
